@@ -4,19 +4,47 @@ const fetch = require('node-fetch')
 const auth = require('../../../auth.json')
 const logger = require('../../utils/logger')
 
+const botList = [
+  'dnd-bot'
+]
 
 // Initialize Discord Bot
-const testBot = new Discord.Client({
+const client = new Discord.Client({
   token: auth.testBotToken,
   autorun: true,
 })
 
-testBot.on('ready', () => {
+client.on('ready', () => {
   logger.info('Connected')
   logger.info('Logged in as: ')
-  logger.info(`${testBot.username} - (${testBot.id})`)
+  logger.info(`${client.username} - (${client.id})`)
 
-  const baseUrl = 'http://localhost:4000/graphql'
+
+  const allBots = Object.entries(client.users)
+    .map(userInfo => userInfo[1])
+    .filter(user => user.bot === true)
+
+  const onlineUserIds = Object.entries(client.servers[auth.serverId].members)
+    .map(userInfo => userInfo[1])
+    .filter(user => user.status === 'online')
+    .map(user => user.id)
+
+  const onlineBots = allBots.filter(bot => onlineUserIds.includes(bot.id))
+    .map(bots => bots.username)
+
+  const hasPersonalBots = onlineBots.some(bot => botList.includes(bot))
+
+  if (!hasPersonalBots) {
+    // client.sendMessage({
+    //   to: channelId,
+    //   message: 'No other bots connected. Do you wish to connect a bot?'
+    // }, (err, res) => {
+    //   if (err) logger.info('ERROR:', err)
+    //   if (res) logger.info('RESPONSE:', res)
+    // })
+  }
+
+  // const baseUrl = 'http://localhost:4000/graphql'
 
   // fetch(baseUrl, {
   //   method: 'POST',
@@ -47,42 +75,40 @@ testBot.on('ready', () => {
   //   .then(data => logger.info('data returned:', data))
 
 
-  fetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
-      query: `{
-        getDie(numSides: 10) {
-          roll(numRolls: 10)
-        }
-      }`
-    })
-  })
-    .then(r => r.json())
-    .then(data => logger.info('data returned:', data))
+  // fetch(baseUrl, {
+  //   method: 'POST',
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //     Accept: 'application/json',
+  //   },
+  //   body: JSON.stringify({
+  //     query: `{
+  //       getDie(numSides: 10) {
+  //         roll(numRolls: 10)
+  //       }
+  //     }`
+  //   })
+  // })
+  //   .then(r => r.json())
+  //   .then(data => logger.info('data returned:', data))
 })
 
-// testBot.on('message', (user, userID, channelID, message, evt) => {
-//   // Our bot needs to know if it will execute a command
-//   // It will listen for messages that will start with `!`
-//   if (message.substring(0, 1) === '!') {
-//     let args = message.substring(1).split(' ')
-//     const cmd = args[0]
 
-//     args = args.splice(1)
-//     switch (cmd) {
-//       // !ping
-//       case 'ping':
-//         bot.sendMessage({
-//           to: channelID,
-//           message: 'Pong!',
-//         })
-//         break
-//       // Just add any case commands if you want to..
-//       default:
-//     }
-//   }
-// })
+client.on('message', (user, userId, channelID, message, evt) => {
+  logger.info(message)
+  if (message.substring(0, 1) !== '!') return
+
+  let args = message.substring(1).split(' ')
+  const cmd = args[0]
+  args = args.splice(1)
+
+  switch (cmd.toLowerCase()) {
+    case 'channelid':
+      client.sendMessage({
+        to: channelID,
+        message: channelID
+      })
+      break
+    default:
+  }
+})
